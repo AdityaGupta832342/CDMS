@@ -1,5 +1,5 @@
 try:
-    import mysql.connector as ms
+    import mysql.connector as sqltor
     import PySimpleGUI as sg
     import matplotlib.pyplot as plt
 except ModuleNotFoundError:
@@ -24,31 +24,37 @@ while True:
         user = value['username']
         password = value['password']
         try:
-            mycon = ms.connect(user=user, password=password, host='localhost')
+            mycon = sqltor.connect(user=user, password=password, host='localhost')
+            mycur = mycon.cursor()
             if mycon.is_connected():
                 break
-        except (ms.ProgrammingError, ms.OperationalError) as e1:
+        except (sqltor.ProgrammingError, sqltor.OperationalError) as e1:
             window1.FindElement('label').Update("Can't connect to server, Check server status and credentials")
     else:
         pass
 window1.close()
-leftColumn=[[sg.Text(text="Create Users Here",pad=(10,0))],
-          [sg.Text(text='Enter Name'),sg.In(default_text='ABCD',text_color='grey',key='name')],
-          [sg.Text(text='Enter Phone'),sg.In(default_text='1234567890',text_color='grey',key='phone')],
-          [sg.Text(text='Enter Address'),sg.In(default_text='H-1892',text_color='grey',key='address')],
-          [sg.Button(button_text='Submit',key='submit')]],
-RightColumn=[[sg.Text(text="Find Users Here")],
-          [sg.Text(text='Search User By'),sg.InputOptionMenu(values=['Name','Address','Phone'])],
-          [sg.Text(text="Enter the query"),sg.In(key='squery'),sg.Button(button_text='Search',key='search')],
-          [sg.Table(key='table',values=[])]]
-layout2=[leftColumn,sg.VerticalSeparator,RightColumn]
+LeftColumn = [[sg.Text(text="Create Users Here", pad=(10, 0))],
+              [sg.Text(text='Enter Name'), sg.In(default_text='ABCD', text_color='grey', key='name')],
+              [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='grey', key='phone')],
+              [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='grey', key='address')],
+              [sg.Text(text="Covid Status"),sg.Checkbox(text="+ve",key="+ve"),sg.Checkbox(text="-ve",key="-ve")]
+              [sg.Button(button_text='Submit', key='submit'),sg.Button(button_text="Update",key='Update')]
+              ]
+RightColumn = [[sg.Text(text="Find Users Here")],
+               [sg.Text(text='Search User By'), sg.InputOptionMenu(values=['Name', 'Address', 'Phone'],key="option")],
+               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
+               [sg.Listbox(values=[], enable_events=True, size=(40, 5), key="list",no_scrollbar=True)],
+               ]
+layout2 = [[
+        sg.Column(LeftColumn),
+        sg.VSeperator(),
+        sg.Column(RightColumn),]]
 window2=sg.Window(title="COVID19 User Finder/Creator",layout=layout2)
 while True:
     event,value=window2.read()
     if event==sg.WINDOW_CLOSED:
         break
     elif event=='submit':
-        mycur=mycon.cursor()
         mycur.execute("show databases;")
         data = mycur.fetchall()
         if ('covid19',) in data:
@@ -58,19 +64,37 @@ while True:
             mycur.execute("use covid19;")
         mycur.execute("show tables")
         data2 = mycur.fetchall()
-        if [('User',),("Meetings",)] in data2:
+        if ('user',) in data2:
             try:
-                mycur.execute("insert into User(Name,Phone No,Address) values(%s,%s,%s)", (
-                    value['name'], value['Phone'], value["Address"]))
+                mycur.execute("insert into User(Name,Phone,Address) values(%s,%s,%s)", (
+                    value['name'], value['phone'], value["address"]))
                 mycon.commit()
-                mycur.execute('select * from data')
+                mycur.execute('select * from user')
                 data3 = mycur.fetchall()
-            except ms.IntegrityError:
+            except sqltor.IntegrityError:
                 pass
         else:
-            mycur.execute(
-                "create table User(UserID primary key auto_increment,Name varchar(18) not null,Phone int(10) UNIQUE not null,Address varchar(30) not null")
-            mycur.execute("insert into User(Name,Phone No,Address) values(%s,%s,%s)", (
-                value['name'], value['Phone'], value["Address"]))
+            mycur.execute('create table User'
+                          '(UserID int Primary key auto_increment,'
+                          'Name varchar(18) not null,'
+                          'Phone BIGINT UNIQUE not null,'
+                          'Address varchar(30) not null,'
+                          'Covid Status boolean not null)')
+            mycur.execute("insert into User(Name,Phone,Address) values(%s,%s,%s)",
+                          (value['name'], value['phone'], value["address"]))
             mycon.commit()
+    elif event=="Update":
+        layout=[[sg.Text(text='Update'),sg.InputOptionMenu(values=["Name","Number","Address"])]]
+    elif event=='search':
+        searchby=value['option']
+        query=value['squery']
+        list=[searchby,query]
+        print(list)
+        mycur.execute("use covid19")
+        mycur.execute("select * from user where %s ='%s'"%(searchby,query))
+        dat=mycur.fetchall()
+        print(dat)
+        window2.FindElement('list').Update(*dat)
 window2.close()
+import os
+os.system('python pr_input.py')
