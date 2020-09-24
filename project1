@@ -32,9 +32,9 @@ while True:
         pass
 window1.close()
 LeftColumn = [[sg.Text(text="Create Users Here", pad=(10, 0))],
-              [sg.Text(text='Enter Name'), sg.In(default_text='ABCD', text_color='grey', key='name')],
-              [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='grey', key='phone')],
-              [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='grey', key='address')],
+              [sg.Text(text='Enter Name'), sg.In(default_text='ABCD', text_color='black', key='name')],
+              [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='black', key='phone')],
+              [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
               [sg.Text(text="Covid Status"), sg.Radio(text="+ve",key='+ve', group_id="radio1"),
                sg.Radio(text="-ve", key="-ve", group_id="radio1")],
               [sg.Button(button_text='Submit', key='submit')],
