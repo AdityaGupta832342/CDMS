@@ -1,16 +1,13 @@
 try:
     import mysql.connector as sqltor
     import PySimpleGUI as sg
-    import matplotlib.pyplot as plt
 except ModuleNotFoundError:
     import sys, subprocess
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'matplotlib'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'mysql-connector-python'])
     import PySimpleGUI as sg
-    import matplotlib.pyplot as plt
     import mysql.connector as sqltor
-sg.theme('BluePurple')
+sg.theme('SystemDefault')
 layout = [[sg.Text(text="Enter Mysql Login Credentials")],
           [sg.Text(text="Username"), sg.Input(default_text='root', key='username')],
           [sg.Text(text="Password"), sg.In(password_char='*', key='password')],
@@ -20,7 +17,7 @@ window1 = sg.Window(title='MYSQL Login Page', layout=layout)
 while True:
     event, value = window1.read()
     if event == sg.WINDOW_CLOSED or event == 'Cancel':
-        break
+        quit()
     elif event == 'login':
         user = value['username']
         password = value['password']
@@ -72,8 +69,8 @@ while True:
             mycur.execute("create database covid19;")
             mycur.execute("use covid19;")
         mycur.execute("show tables")
-        data2 = mycur.fetchall()
-        if ('user',) in data2:
+        data = mycur.fetchall()
+        if ('user',) in data:
             try:
                 r_keys = ["+ve", "-ve"]
                 mycur.execute("insert into User(Name,Phone,Address,CovidStatus) values(%s,%s,%s,%s)", (
@@ -105,6 +102,7 @@ while True:
         option=value["l3option"]
         userid=value["UQuery"]
         Nvalue=value["NValue"]
+        mycur.execute('use covid19;')
         mycur.execute("update user set %s='%s' where UserID='%s'"%(option,Nvalue,userid))
         mycon.commit()
     elif event == 'search':
