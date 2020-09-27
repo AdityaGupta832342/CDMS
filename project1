@@ -1,65 +1,175 @@
 try:
     import mysql.connector as sqltor
     import PySimpleGUI as sg
+    import os
 except ModuleNotFoundError:
     import sys, subprocess
+
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'mysql-connector-python'])
     import PySimpleGUI as sg
     import mysql.connector as sqltor
-sg.theme('SystemDefault')
-layout = [[sg.Text(text="Enter Mysql Login Credentials")],
-          [sg.Text(text="Username"), sg.Input(default_text='root', key='username')],
-          [sg.Text(text="Password"), sg.In(password_char='*', key='password')],
-          [sg.Button(button_text='Login', key='login'), sg.Button(button_text='Cancel', key="Cancel")],
-          [sg.Text(key='label', text='', size=(60, 1))]]
-window1 = sg.Window(title='MYSQL Login Page', layout=layout)
-while True:
-    event, value = window1.read()
-    if event == sg.WINDOW_CLOSED or event == 'Cancel':
-        quit()
-    elif event == 'login':
-        user = value['username']
-        password = value['password']
-        try:
-            mycon = sqltor.connect(user=user, password=password, host='localhost')
-            mycur = mycon.cursor()
-            if mycon.is_connected():
-                break
-        except (sqltor.ProgrammingError, sqltor.OperationalError) as e1:
-            window1.FindElement('label').Update("Can't connect to server, Check server status and credentials")
-    else:
-        pass
-window1.close()
-LeftColumn = [[sg.Text(text="Create Users Here", pad=(10, 0))],
-              [sg.Text(text='Enter Name'), sg.In(default_text='ABCD', text_color='black', key='name')],
-              [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='black', key='phone')],
-              [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
-              [sg.Text(text="Covid Status"), sg.Radio(text="+ve",key='+ve', group_id="radio1"),
-               sg.Radio(text="-ve", key="-ve", group_id="radio1")],
-              [sg.Button(button_text='Submit', key='submit')],
-              [sg.Button(button_text="Update", key='Update')]]
-RightColumn = [[sg.Text(text="Find Users Here")],
-               [sg.Text(text='Search User By'), sg.InputOptionMenu(values=['Name', 'Address', 'Phone'], key="option")],
-               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
-               [sg.Listbox(values=[], enable_events=True, size=(15, 5), key="list", no_scrollbar=True)],
-               ]
+    import os
+sg.theme('BluePurple')
+if os.path.isfile("temp.txt"):
+    file = open("temp.txt", "r")
+    str = file.readline()
+    user = str.split(":")[1]
+    str = file.readline()
+    password = str.split(":")[1]
+    mycon = sqltor.connect(user=user, password=password, host='localhost')
+    mycur = mycon.cursor()
+else:
+    layout = [[sg.Text(text="Enter Mysql Login Credentials")],
+              [sg.Text(text="Username"), sg.In(default_text='root', key='username')],
+              [sg.Text(text="Password"), sg.In(password_char='*', key='password')],
+              [sg.Button(button_text='Login', key='login'), sg.Button(button_text='Cancel', key="Cancel")],
+              [sg.Text(text="Save Password?"), sg.Radio("Yes", "radio1", key='--SAVE--'), sg.Radio("No", "radio1")],
+              [sg.Text(key='label', text='', size=(60, 1))]]
+    window1 = sg.Window(title='MYSQL Login Page', layout=layout)
+    while True:
+        event, value = window1.read()
+        if event == sg.WINDOW_CLOSED or event == 'Cancel':
+            quit()
+        elif event == 'login':
+            user = value['username']
+            password = value['password']
+            r_key = ["Yes", "No"]
+            if value['--SAVE--']:
+                with open("temp.txt", "w") as file:
+                    file.write("User:" + user + "\nPassword:" + password)
+            try:
+                mycon = sqltor.connect(user=user, password=password, host='localhost')
+                mycur = mycon.cursor()
+                if mycon.is_connected():
+                    break
+            except (sqltor.ProgrammingError, sqltor.OperationalError) as e1:
+                window1.FindElement('label').Update("Can't connect to server, Check server status and credentials")
+        else:
+            pass
+    window1.close()
+RightColumn = [[sg.Text(text="Create Users Here", )],
+               [sg.Text(text='Enter Name'), sg.In(default_text='ABCD', text_color='black', key='name')],
+               [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='black', key='phone')],
+               [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
+               [sg.Text(text="Covid Status"), sg.Radio(text="+ve", key='+ve', group_id="radio1"),
+                sg.Radio(text="-ve", key="-ve", group_id="radio1")],
+               [sg.Button(button_text='Submit', key='submit', pad=(70, 0))],
+               [sg.Button(button_text="Update", key='Update', pad=(70, 10))]]
+leftColumn = [[sg.Text(text="Find Users Here")],
+              [sg.Text(text='Search User By'), sg.InputOptionMenu(values=['Name', 'Address', 'Phone'], key="option")],
+              [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
+              [sg.Table(headings=["UserID", "Name", "Phone", "Address", "CovidStatus"],
+                        values=[("UserID", "Name", "Phone", "Address", "CovidStatus"), ],
+                        enable_events=True, key="list", size=(300, 10), pad=(70, 10))],
+              ]
 DisabledLeftColumn = [[sg.Text(text='Update'),
-                       sg.InputOptionMenu(values=['---', "Name", "Number", "Address", "CovidStatus"], key="l3option",
+                       sg.InputOptionMenu(values=['---', "Name", "Phone", "Address", "CovidStatus"], key="l3option",
                                           default_value='---')],
                       [sg.Text("Enter UserID"), sg.In(key="UQuery")],
                       [sg.Text('Enter New Value'), sg.In(key="NValue")],
                       [sg.Button("Update", key="update"),
                        sg.Button(button_text="Back to Create Users", key="return", visible=False)]]
-layout2 = [[sg.Column(RightColumn), sg.VSeperator(),
-            sg.Column(LeftColumn, key="CreateUser"),
+LeftColumn1 = [[sg.Text(text="Create Meetings Here", pad=(10, 0))],
+               [sg.Text(text='Enter UserIDs'), sg.In(default_text='1,2,4', text_color='black', key='UIs')],
+               [sg.Text(text="Enter Date    "), sg.In(default_text='yyyy-mm-dd', text_color='black', key='Date')],
+               [sg.Text(text="Enter Purpose"),
+                sg.InputOptionMenu(values=["Friend/Family", "Business", "Service and Repair", "Other"],
+                                   key="purpose")],
+               [sg.Button(button_text='Submit', key='Submit')]
+               ]
+RightColumn1 = [[sg.Button(button_text="Check a person for Covid", key="Check")],
+                [sg.Button(button_text="Get the list of Probable Cases", key="LIST")]]
+layout2 = [[sg.Column(leftColumn), sg.VSeperator(color="lightblue", pad=(0, 0)),
+            sg.Column(RightColumn, key="CreateUser"),
             sg.Column(DisabledLeftColumn, visible=False, key="UpdateUser")],
-]
+           [sg.HorizontalSeparator(color="lightblue", pad=(0, 10))],
+           [sg.Column(LeftColumn1),
+            sg.VSeperator(color="lightblue", pad=(70, 0)),
+            sg.Column(RightColumn1), ]
+           ]
 window2 = sg.Window(title="COVID19 User Finder/Creator", layout=layout2)
 while True:
     event, value = window2.read()
     if event == sg.WINDOW_CLOSED:
         break
+    elif event == 'Submit':
+        mycur.execute("show databases;")
+        data = mycur.fetchall()
+        if ('covid19',) in data:
+            mycur.execute("use covid19;")
+        else:
+            mycur.execute("create database covid19;")
+            mycur.execute("use covid19;")
+        mycur.execute("show tables")
+        data = mycur.fetchall()
+        if ('meetinginfo',) in data:
+            mycur.execute(
+                "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
+            mycur.execute("select max(MeetId) from MeetingInfo")
+            for i in mycur.fetchone():
+                MeetId = i
+            uid = value['UIs']
+            uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
+            mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
+            mycon.commit()
+        else:
+            mycur.execute("create table MeetingInfo(MeetId int primary key auto_increment,"
+                          "Purpose varchar(20) not null,"
+                          "Date Date not null);")
+            mycur.execute("create table MeetingUser(MeetId int not null ,"
+                          "UserId int not null,"
+                          "foreign key(MeetId) references MeetingInfo(MeetId),"
+                          "foreign key (UserId) references user(UserId));")
+            mycur.execute(
+                "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
+            mycur.execute("select max(MeetId) from MeetingInfo")
+            for i in mycur.fetchone():
+                MeetId = i
+            uid = value['UIs']
+            uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
+            mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
+            mycon.commit()
+    if event == "Check":
+        UID = sg.popup_get_text("Enter UID to check", "Check Covid Status", grab_anywhere=True)
+        mycur.execute("use covid19;")
+        mycur.execute("select covidstatus from user where UserID=%s" % UID)
+        data = mycur.fetchone()
+        for i in data:
+            Covidstatus = i
+        sg.EasyPrint(Covidstatus, size=(20, 2), grab_anywhere=True)
+    if event == "LIST":
+        mycur.execute("use covid19;")
+        mycur.execute('select m.meetid  from meetinguser m,user n where m.userid=n.userid and n.covidstatus="+ve";')
+        data = mycur.fetchall()
+        data = [i for (i,) in data]
+        temp = []
+        for i in range(len(data)):
+            mycur.execute(
+                "select m.userid from meetinguser m , user n where m.userid=n.userid and m.meetid=%s" % data[i])
+            temp.append(mycur.fetchall())
+        mycur.execute("select userid from user where covidstatus='+ve'")
+        surecases = mycur.fetchall()
+        surecases = [j for (j,) in surecases]
+        temp2 = []
+        for i in temp:
+            for (j,) in i:
+                temp2.append(j)
+        temp = temp2
+        for i in surecases:
+            temp.remove(i)
+        for i in temp:
+            mycur.execute("update user set covidstatus='prob+ve' where (userid=%s and covidstatus='-ve')" % i)
+            mycon.commit()
+        mycur.execute("select userid,name from user where covidstatus='prob+ve'")
+        finaldata = mycur.fetchall()
+        table = [[sg.Table(values=finaldata, headings=['UserID', 'Name'])]]
+        window1 = sg.Window(title="Probable cases", layout=table)
+        while True:
+            event, value = window1.read()
+            if event == sg.WINDOW_CLOSED:
+                break
+        window1.close()
     elif event == 'submit':
         mycur.execute("show databases;")
         data = mycur.fetchall()
@@ -85,7 +195,7 @@ while True:
                           "Name varchar(18) not null,"
                           "Phone BIGINT UNIQUE not null,"
                           "Address varchar(30) not null,"
-                          "CovidStatus varchar(3) not null check (CovidStatus in ('+ve','-ve')))")
+                          "CovidStatus varchar(8) not null check (CovidStatus in ('+ve','prob+ve','-ve')))")
             r_keys = ["+ve", "-ve"]
             mycur.execute("insert into User(Name,Phone,Address,CovidStatus) values(%s,%s,%s,%s)", (
                 value['name'], value['phone'], value["address"], [key for key in r_keys if value[key]][0]))
@@ -99,11 +209,11 @@ while True:
         window2["UpdateUser"].Update(visible=False)
         window2["return"].Update(visible=False)
     elif event == "update":
-        option=value["l3option"]
-        userid=value["UQuery"]
-        Nvalue=value["NValue"]
+        option = value["l3option"]
+        userid = value["UQuery"]
+        Nvalue = value["NValue"]
         mycur.execute('use covid19;')
-        mycur.execute("update user set %s='%s' where UserID='%s'"%(option,Nvalue,userid))
+        mycur.execute("update user set %s='%s' where UserID='%s'" % (option, Nvalue, userid))
         mycon.commit()
     elif event == 'search':
         searchby = value['option']
@@ -112,5 +222,5 @@ while True:
         mycur.execute("use covid19")
         mycur.execute("select * from user where %s ='%s'" % (searchby, query))
         dat = mycur.fetchall()
-        window2.FindElement('list').Update(*dat)
+        window2.FindElement('list').Update(dat)
 window2.close()
