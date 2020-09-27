@@ -81,8 +81,9 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
                [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
                [sg.Text(text="Covid Status"), sg.Radio(text="+ve", key='+ve', group_id="radio1"),
                 sg.Radio(text="-ve", key="-ve", group_id="radio1")],
-               [sg.Button(button_text='Submit', key='submit', pad=(70, 0))],
-               [sg.Button(button_text="Update", key='Update', pad=(70, 10))]]
+               [sg.Button(button_text='Submit', key='submit', pad=(70, 0)),
+                sg.Button(button_text="Update", key='Update', pad=(70, 10))],
+               [sg.Text(key='UserError', text='', size=(60, 1))]]
 
 ## Layout of row 1 column 2 for creating new users
 
@@ -111,7 +112,8 @@ LeftColumn1 = [[sg.Text(text="Log Meetings Here", pad=(10, 0))],
                [sg.Text(text="Enter Purpose"),
                 sg.InputOptionMenu(values=["Friend/Family", "Business", "Service and Repair", "Other"],
                                    key="purpose")],
-               [sg.Button(button_text='Submit', key='Submit')]]
+               [sg.Button(button_text='Submit', key='Submit')],
+               [sg.Text(key='MeetError', text='', size=(60, 1))]]
 
 ## Layout of row 2 column 1 for logging meetings of users
 
@@ -147,17 +149,20 @@ while True:
         data = mycur.fetchall()
         if ('meetinginfo',) in data:
             ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
-            mycur.execute(
-                "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
+            try:
+                mycur.execute(
+                    "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
 
-            ## inserts values entered by user into the  table
+                ## inserts values entered by user into the  table
 
-            mycur.execute("select max(MeetId) from MeetingInfo")
-            for i in mycur.fetchone():
-                MeetId = i
-            uid = value['UIs']
-            uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
-            mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
+                mycur.execute("select max(MeetId) from MeetingInfo")
+                for i in mycur.fetchone():
+                    MeetId = i
+                uid = value['UIs']
+                uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
+                mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
+            except (sqltor.ProgrammingError,sqltor.InternalError,sqltor.IntegrityError,sqltor.DataError):
+                window2.FindElement("MeetError").Update("There was a problem entering the data.")
 
             ## Insterts value into the table (MeetingUser)
 
@@ -285,7 +290,7 @@ while True:
             ## Inserting personal info. of users into table (User)
 
             except sqltor.IntegrityError:
-                pass
+                window2.FindElement("UserError").Update('There is an entry with same Phone no.')
 
         ## Helps to restrict duplicacy of data
 
