@@ -90,7 +90,7 @@ leftColumn = [[sg.Text(text="Find Users Here")],
               [sg.Text(text='Search User By'), sg.InputOptionMenu(values=['Name', 'Address', 'Phone'], key="option")],
               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
               [sg.Table(headings=["UserID", "Name", "Phone", "Address", "CovidStatus"],
-                        values=[("UserID", "Name", "Phone", "Address", "CovidStatus"), ],
+                        values=[("UID", " SAMPLE ", "1234567890", "VWXYZ", "-ve"), ],
                         enable_events=True, key="list", size=(300, 10), pad=(70, 10))], ]
 
 ## Layout of row 1 column 1 for searching existing users
@@ -287,7 +287,7 @@ while True:
             except sqltor.IntegrityError:
                 pass
 
-        ## Helps to restrict duplicacy of data 
+        ## Helps to restrict duplicacy of data
 
         else:
             mycur.execute("create table User(UserID int Primary key auto_increment,"
@@ -302,7 +302,7 @@ while True:
             mycur.execute("insert into User(Name,Phone,Address,CovidStatus) values(%s,%s,%s,%s)", (
                 value['name'], value['phone'], value["address"], [key for key in r_keys if value[key]][0]))
 
-            ## Inserting values into user 
+            ## Inserting values into user
 
             mycon.commit()
     elif event == "Update":
@@ -310,14 +310,14 @@ while True:
         window2["UpdateUser"].Update(visible=True)
         window2["return"].Update(visible=True)
 
-    ## Create user is disables and update user is enabled once update button is clicked 
+    ## Create user is disables and update user is enabled once update button is clicked
 
     elif event == "return":
         window2["CreateUser"].Update(visible=True)
         window2["UpdateUser"].Update(visible=False)
         window2["return"].Update(visible=False)
 
-    ## Create user is enabled and update user is disabled once return button is clicked 
+    ## Create user is enabled and update user is disabled once return button is clicked
 
     elif event == "update":
         option = value["l3option"]
@@ -327,7 +327,7 @@ while True:
         mycur.execute("update user set %s='%s' where UserID='%s'" % (option, Nvalue, userid))
         mycon.commit()
 
-    ## Updates info of the user according to the new data provided 
+    ## Updates info of the user according to the new data provided
 
     elif event == 'search':
         searchby = value['option']
@@ -338,6 +338,6 @@ while True:
         dat = mycur.fetchall()
         window2.FindElement('list').Update(dat)
 
-## Searches user info according to query entered 
+## Searches user info according to query entered
 
 window2.close()
