@@ -365,6 +365,7 @@ while True:
         window2.FindElement('list').Update(dat)
 
 ## Searches user info according to query entered
+
     elif event=="hospitallist":
         pincode=sg.popup_get_text("Enter Pincode","Chrome")
         query = "covid test centres near {}".format(pincode)
