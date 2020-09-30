@@ -161,7 +161,9 @@ while True:
         mycur.execute("show tables")
         data = mycur.fetchall()
         if ('meetinginfo',) in data:
+        
             ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
+            
             try:
                 mycur.execute(
                     "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
@@ -174,7 +176,9 @@ while True:
                 uid = value['UIs']
                 uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
                 mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
+                
                 ## Insterts value into the table (MeetingUser)
+                
                 mycon.commit()
             except sqltor.Error:
                 window2.FindElement("MeetError").Update("There was a problem logging the meet")
@@ -377,7 +381,7 @@ while True:
         res = [i for i in search(query, tld="co.in", num=3, stop=3, pause=2)]
         webbrowser.open_new_tab(res[0])
 
-        ## opens a tab on the internet to show covid testing centers near the pincode entered
+        ## Opens a tab on the internet to show covid testing centers near the pincode entered
 
     elif event == "graph":
         try:
@@ -445,6 +449,6 @@ while True:
 
         sg.popup(string2, title="About...", grab_anywhere=True)
 
-    ## helps user to use the application smoothly
+    ## Helps user to use the application smoothly
 
 window2.close()
