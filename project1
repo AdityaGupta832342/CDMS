@@ -8,8 +8,7 @@ try:
 except (ModuleNotFoundError,ImportError):
     import sys, subprocess
 
-    subprocess.check_call([sys.executable, "-m", "pip", "install", 'webbrowser'])
-    subprocess.check_call([sys.executable, "-m", "pip", "install", 'googlesearch'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'google'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'mysql-connector-python'])
     import PySimpleGUI as sg
