@@ -3,11 +3,12 @@ try:
     import PySimpleGUI as sg
     import os
     import webbrowser
+    import matplotlib.pyplot as plt
     from googlesearch import search
 
 except (ModuleNotFoundError,ImportError):
     import sys, subprocess
-
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'matplotlib'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'google'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'mysql-connector-python'])
@@ -15,6 +16,7 @@ except (ModuleNotFoundError,ImportError):
     import mysql.connector as sqltor
     import os
     import webbrowser
+    import matplotlib.pyplot as plt
     from googlesearch import search
 
 ## Error handling for importing modules
@@ -28,10 +30,10 @@ if os.path.isfile("temp.txt"):
     ## Checking for previously saved passwords
 
     file = open("temp.txt", "r")
-    str = file.readline()
-    user = str.split(":")[1]
-    str = file.readline()
-    password = str.split(":")[1]
+    string = file.readline()
+    user = string.split(":")[1]
+    string = file.readline()
+    password = string.split(":")[1]
     mycon = sqltor.connect(user=user, password=password, host='localhost')
     mycur = mycon.cursor()
 else:
@@ -94,7 +96,7 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
 
 leftColumn = [[sg.Text(text="Find Users Here")],
               [sg.Text(text='Search User By'),
-               sg.InputOptionMenu(values=['Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
+               sg.InputOptionMenu(values=['UserID','Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
               [sg.Table(headings=["UserID", "Name", "Phone", "Address", "CovidStatus"],
                         values=[("UID", " SAMPLE ", "1234567890", "VWXYZ", "-ve"), ],
@@ -364,11 +366,36 @@ while True:
         window2.FindElement('list').Update(dat)
 
 ## Searches user info according to query entered
-
     elif event=="hospitallist":
         pincode=sg.popup_get_text("Enter Pincode","Chrome")
         query = "covid test centres near {}".format(pincode)
         res = [i for i in search(query, tld="co.in", num=3, stop=3, pause=2)]
         webbrowser.get("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s").open(res[0])
+    elif event=="graph":
+        mycur.execute("use covid19")
+        mycur.execute("select substring(Address,1,1) as Block,count(*) "
+                      "from user "
+                      "where covidstatus='+ve' "
+                      "group by Block "
+                      "order by Block;")
+        graphdata=mycur.fetchall()
+        blocks=[]
+        cases=[]
+        for (i,j) in graphdata:
+            blocks.append(i)
+            cases.append(j)
+
+        print(graphdata)
+        n=blocks
+        s=cases
+        line = plt.bar(n, s)
+        plt.xlabel('Blocks')
+        plt.ylabel("Cases")
+
+        for i in range(len(s)):
+            plt.annotate(str(s[i]), xy=(n[i], s[i]), ha='center', va='bottom')
+
+        plt.show()
+
 
 window2.close()
