@@ -6,8 +6,9 @@ try:
     import matplotlib.pyplot as plt
     from googlesearch import search
 
-except (ModuleNotFoundError,ImportError):
+except (ModuleNotFoundError, ImportError):
     import sys, subprocess
+
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'matplotlib'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'google'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
@@ -88,17 +89,17 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
                [sg.Text(text='Enter Phone'), sg.In(default_text='1234567890', text_color='black', key='phone')],
                [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
                [sg.Text(text="Covid Status"), sg.Radio(text="+ve", key='+ve', group_id="radio1"),
-                sg.Radio(text="-ve", key="-ve", group_id="radio1",default=True)],
+                sg.Radio(text="-ve", key="-ve", group_id="radio1", default=True)],
                [sg.Button(button_text='Submit', key='submit', pad=(70, 0))],
                [sg.Button(button_text="Update", key='Update', pad=(70, 10))],
-               [sg.Text(text='',size=(40,1),key="UserError")]]
+               [sg.Text(text='', size=(40, 1), key="UserError")]]
 
 ## Layout of row 1 column 2 for creating new users
-menulayout=[["Options",["Clear Database","Delete Saved Password"]],
-            ["Help",["About..."]]]
+menulayout = [["Options", ["Clear Database", "Delete Saved Password"]],
+              ["Help", ["About..."]]]
 leftColumn = [[sg.Text(text="Find Users Here")],
               [sg.Text(text='Search User By'),
-               sg.InputOptionMenu(values=['UserID','Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
+               sg.InputOptionMenu(values=['UserID', 'Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
               [sg.Table(headings=["UserID", "Name", "Phone", "Address", "CovidStatus"],
                         values=[("UID", " SAMPLE ", "1234567890", "VWXYZ", "-ve"), ],
@@ -123,12 +124,12 @@ LeftColumn1 = [[sg.Text(text="Log Meetings Here", pad=(10, 0))],
                 sg.InputOptionMenu(values=["Friend/Family", "Business", "Service and Repair", "Other"],
                                    key="purpose")],
                [sg.Button(button_text='Submit', key='Submit')],
-               [sg.Text(text='',key="MeetError",size=(40,1))]]
+               [sg.Text(text='', key="MeetError", size=(40, 1))]]
 
 ## Layout of row 2 column 1 for logging meetings of users
 
-RightColumn1=[[sg.Button("COVID test centre near me",k="hospitallist",pad=(20,10))],
-              [sg.Button("View Graphs",k="graph",pad=(20,10))]]
+RightColumn1 = [[sg.Button("COVID test centre near me", k="hospitallist", pad=(20, 10))],
+                [sg.Button("View Graphs", k="graph", pad=(20, 10))]]
 
 layout2 = [[sg.Menu(menulayout)],
            [sg.Column(leftColumn), sg.VSeperator(color="lightblue", pad=(0, 0)),
@@ -160,7 +161,7 @@ while True:
         mycur.execute("show tables")
         data = mycur.fetchall()
         if ('meetinginfo',) in data:
-        ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
+            ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
             try:
                 mycur.execute(
                     "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
@@ -359,22 +360,26 @@ while True:
     elif event == 'search':
         searchby = value['option']
         query = value['squery']
-        if query=='':
+        if query == '':
             mycur.execute("use covid19")
             mycur.execute("select * from user")
         else:
             mycur.execute("use covid19")
-            mycur.execute("select * from user where %s='%s'"%(searchby,query))
+            mycur.execute("select * from user where %s='%s'" % (searchby, query))
         dat = mycur.fetchall()
         window2.FindElement('list').Update(dat)
 
-## Searches user info according to query entered
-    elif event=="hospitallist":
-        pincode=sg.popup_get_text("Enter Pincode","Chrome")
+        ## Searches user info according to query entered
+
+    elif event == "hospitallist":
+        pincode = sg.popup_get_text("Enter Pincode", "Chrome")
         query = "covid test centres near {}".format(pincode)
         res = [i for i in search(query, tld="co.in", num=3, stop=3, pause=2)]
-        webbrowser.get("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s").open(res[0])
-    elif event=="graph":
+        webbrowser.open_new_tab(res[0])
+
+        ## opens a tab on the internet to show covid testing centers near the pincode entered
+
+    elif event == "graph":
         try:
             mycur.execute("use covid19")
             mycur.execute("select substring(Address,1,1) as Block,count(*) "
@@ -382,13 +387,15 @@ while True:
                           "where covidstatus='+ve' "
                           "group by Block "
                           "order by Block;")
-            graphdata=mycur.fetchall()
-            blocks=[]
-            cases=[]
-            for (i,j) in graphdata:
+
+            ## Counts number of cases per block
+
+            graphdata = mycur.fetchall()
+            blocks = []
+            cases = []
+            for (i, j) in graphdata:
                 blocks.append(i)
                 cases.append(j)
-
 
             line = plt.bar(blocks, cases)
             plt.xlabel('Blocks')
@@ -398,21 +405,46 @@ while True:
                 plt.annotate(str(cases[i]), xy=(blocks[i], cases[i]), ha='center', va='bottom')
 
             plt.show()
+
+            ## plots graph of number of cases on Y axis vs Blocks on X axis
+
         except sqltor.Error:
             pass
-    elif event=="Clear Database":
+    elif event == "Clear Database":
         mycur.execute('drop database covid19')
         mycon.commit()
-    elif event=="Delete Saved Password":
+
+    ## Clears existing data in database covid19
+
+    elif event == "Delete Saved Password":
         os.remove("temp.txt")
-    elif event=="About...":
-        string2='''
-        Welcome to COVID 19 Case Management Application\n
-        This is a RDBMS based system which logs meetings between Users in the DBMS\n
-        To start you need to create users in the Create Users section\n
-        You can add as many users you want and search them in the Search Section\n
-        Once a covid +ve person is logged in a meeting with a non COVID person,The covid -ve person\n
-        is marked as prob+ve. You can update any info by clicking the update button\n
-        You can also view a graph based on the block vs. cases by clicking the graph button\n '''
-        sg.popup(string2,title="About...",grab_anywhere=True)
+
+    ## Deletes saved passwords
+
+    elif event == "About...":
+        string2 = '''
+        Welcome to COVID 19 Case Management Application
+        
+        This is a RDBMS based system which logs meetings 
+                    between Users in the DBMS
+        
+        To start you need to create users in the Create 
+                           Users section
+        
+        You can add as many users you want and search them 
+                       in the Search Section
+        
+        Once a covid +ve person is logged in a meeting with 
+             a non COVID person,The covid -ve person
+        
+        is marked as prob+ve. You can update any info by 
+                    clicking the update button
+        
+        You can also view a graph based on the block vs. 
+             cases by clicking the graph button '''
+
+        sg.popup(string2, title="About...", grab_anywhere=True)
+
+    ## helps user to use the application smoothly
+
 window2.close()
