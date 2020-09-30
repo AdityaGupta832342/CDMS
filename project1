@@ -36,6 +36,7 @@ if os.path.isfile("temp.txt"):
     password = string.split(":")[1]
     mycon = sqltor.connect(user=user, password=password, host='localhost')
     mycur = mycon.cursor()
+    file.close()
 else:
 
     ## Taking input for username and password and connecting to MySQL server
@@ -93,7 +94,8 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
                [sg.Text(text='',size=(40,1),key="UserError")]]
 
 ## Layout of row 1 column 2 for creating new users
-
+menulayout=[["Options",["Clear Database","Delete Saved Password"]],
+            ["Help",["About..."]]]
 leftColumn = [[sg.Text(text="Find Users Here")],
               [sg.Text(text='Search User By'),
                sg.InputOptionMenu(values=['UserID','Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
@@ -128,7 +130,8 @@ LeftColumn1 = [[sg.Text(text="Log Meetings Here", pad=(10, 0))],
 RightColumn1=[[sg.Button("COVID test centre near me",k="hospitallist",pad=(20,10))],
               [sg.Button("View Graphs",k="graph",pad=(20,10))]]
 
-layout2 = [[sg.Column(leftColumn), sg.VSeperator(color="lightblue", pad=(0, 0)),
+layout2 = [[sg.Menu(menulayout)],
+           [sg.Column(leftColumn), sg.VSeperator(color="lightblue", pad=(0, 0)),
             sg.Column(RightColumn, key="CreateUser"),
             sg.Column(DisabledLeftColumn, visible=False, key="UpdateUser")],
            [sg.HorizontalSeparator(color="lightblue", pad=(0, 10))],
@@ -372,30 +375,44 @@ while True:
         res = [i for i in search(query, tld="co.in", num=3, stop=3, pause=2)]
         webbrowser.get("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s").open(res[0])
     elif event=="graph":
-        mycur.execute("use covid19")
-        mycur.execute("select substring(Address,1,1) as Block,count(*) "
-                      "from user "
-                      "where covidstatus='+ve' "
-                      "group by Block "
-                      "order by Block;")
-        graphdata=mycur.fetchall()
-        blocks=[]
-        cases=[]
-        for (i,j) in graphdata:
-            blocks.append(i)
-            cases.append(j)
-
-        print(graphdata)
-        n=blocks
-        s=cases
-        line = plt.bar(n, s)
-        plt.xlabel('Blocks')
-        plt.ylabel("Cases")
-
-        for i in range(len(s)):
-            plt.annotate(str(s[i]), xy=(n[i], s[i]), ha='center', va='bottom')
-
-        plt.show()
+        try:
+            mycur.execute("use covid19")
+            mycur.execute("select substring(Address,1,1) as Block,count(*) "
+                          "from user "
+                          "where covidstatus='+ve' "
+                          "group by Block "
+                          "order by Block;")
+            graphdata=mycur.fetchall()
+            blocks=[]
+            cases=[]
+            for (i,j) in graphdata:
+                blocks.append(i)
+                cases.append(j)
 
 
+            line = plt.bar(blocks, cases)
+            plt.xlabel('Blocks')
+            plt.ylabel("Cases")
+
+            for i in range(len(cases)):
+                plt.annotate(str(cases[i]), xy=(blocks[i], cases[i]), ha='center', va='bottom')
+
+            plt.show()
+        except sqltor.Error:
+            pass
+    elif event=="Clear Database":
+        mycur.execute('drop database covid19')
+        mycon.commit()
+    elif event=="Delete Saved Password":
+        os.remove("temp.txt")
+    elif event=="About...":
+        string2='''
+        Welcome to COVID 19 Case Management Application\n
+        This is a RDBMS based system which logs meetings between Users in the DBMS\n
+        To start you need to create users in the Create Users section\n
+        You can add as many users you want and search them in the Search Section\n
+        Once a covid +ve person is logged in a meeting with a non COVID person,The covid -ve person\n
+        is marked as prob+ve. You can update any info by clicking the update button\n
+        You can also view a graph based on the block vs. cases by clicking the graph button\n '''
+        sg.popup(string2,title="About...",grab_anywhere=True)
 window2.close()
