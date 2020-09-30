@@ -2,15 +2,21 @@ try:
     import mysql.connector as sqltor
     import PySimpleGUI as sg
     import os
+    import webbrowser
+    from googlesearch import search
 
-except ModuleNotFoundError:
+except (ModuleNotFoundError,ImportError):
     import sys, subprocess
 
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'webbrowser'])
+    subprocess.check_call([sys.executable, "-m", "pip", "install", 'googlesearch'])
     subprocess.check_call([sys.executable, "-m", "pip", "install", 'PySimpleGUI'])
     subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'mysql-connector-python'])
     import PySimpleGUI as sg
     import mysql.connector as sqltor
     import os
+    import webbrowser
+    from googlesearch import search
 
 ## Error handling for importing modules
 
@@ -81,14 +87,14 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
                [sg.Text(text='Enter Address'), sg.In(default_text='H-1892', text_color='black', key='address')],
                [sg.Text(text="Covid Status"), sg.Radio(text="+ve", key='+ve', group_id="radio1"),
                 sg.Radio(text="-ve", key="-ve", group_id="radio1")],
-               [sg.Button(button_text='Submit', key='submit', pad=(70, 0)),
-                sg.Button(button_text="Update", key='Update', pad=(70, 10))],
-               [sg.Text(key='UserError', text='', size=(60, 1))]]
+               [sg.Button(button_text='Submit', key='submit', pad=(70, 0))],
+               [sg.Button(button_text="Update", key='Update', pad=(70, 10))]]
 
 ## Layout of row 1 column 2 for creating new users
 
 leftColumn = [[sg.Text(text="Find Users Here")],
-              [sg.Text(text='Search User By'), sg.InputOptionMenu(values=['Name', 'Address', 'Phone'], key="option")],
+              [sg.Text(text='Search User By'),
+               sg.InputOptionMenu(values=['Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
               [sg.Text(text="Enter the query"), sg.In(key='squery'), sg.Button(button_text='Search', key='search')],
               [sg.Table(headings=["UserID", "Name", "Phone", "Address", "CovidStatus"],
                         values=[("UID", " SAMPLE ", "1234567890", "VWXYZ", "-ve"), ],
@@ -112,21 +118,21 @@ LeftColumn1 = [[sg.Text(text="Log Meetings Here", pad=(10, 0))],
                [sg.Text(text="Enter Purpose"),
                 sg.InputOptionMenu(values=["Friend/Family", "Business", "Service and Repair", "Other"],
                                    key="purpose")],
-               [sg.Button(button_text='Submit', key='Submit')],
-               [sg.Text(key='MeetError', text='', size=(60, 1))]]
+               [sg.Button(button_text='Submit', key='Submit')]]
 
 ## Layout of row 2 column 1 for logging meetings of users
 
-RightColumn1 = [[sg.Button(button_text="Check a person for Covid", key="Check")],
-                [sg.Button(button_text="Get the list of Probable Cases", key="LIST")]]
-## Layout of row 2 column 2 for buttons to fetch existing data)
+RightColumn1=[[sg.Button("Check nearby hspitals",k="hospitallist",pad=(20,10))],
+              [sg.Button("View Graphs",k="graph",pad=(20,10))]]
+
 layout2 = [[sg.Column(leftColumn), sg.VSeperator(color="lightblue", pad=(0, 0)),
             sg.Column(RightColumn, key="CreateUser"),
             sg.Column(DisabledLeftColumn, visible=False, key="UpdateUser")],
            [sg.HorizontalSeparator(color="lightblue", pad=(0, 10))],
            [sg.Column(LeftColumn1),
-            sg.VSeperator(color="lightblue", pad=(70, 0)),
-            sg.Column(RightColumn1), ]]
+            sg.VSeperator(color="lightblue", pad=(0, 0)),
+            sg.Column(RightColumn1)]]
+
 ## Layout for entire window (window2)
 
 window2 = sg.Window(title="COVID19 User Finder/Creator", layout=layout2)
@@ -149,23 +155,54 @@ while True:
         data = mycur.fetchall()
         if ('meetinginfo',) in data:
             ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
-            try:
-                mycur.execute(
-                    "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
+            mycur.execute(
+                "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
 
-                ## inserts values entered by user into the  table
+            ## inserts values entered by user into the  table
 
-                mycur.execute("select max(MeetId) from MeetingInfo")
-                for i in mycur.fetchone():
-                    MeetId = i
-                uid = value['UIs']
-                uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
-                mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
-            except (sqltor.ProgrammingError,sqltor.InternalError,sqltor.IntegrityError,sqltor.DataError):
-                window2.FindElement("MeetError").Update("There was a problem entering the data.")
+            mycur.execute("select max(MeetId) from MeetingInfo")
+            for i in mycur.fetchone():
+                MeetId = i
+            uid = value['UIs']
+            uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
+            mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
 
             ## Insterts value into the table (MeetingUser)
 
+            mycon.commit()
+            mycur.execute('select m.meetid  from meetinguser m,user n where m.userid=n.userid and n.covidstatus="+ve";')
+            data = mycur.fetchall()
+
+            ## Selecting meeting IDs of meetings in which covid +ve person was there
+
+            data = [i for (i,) in data]
+            temp = []
+            for i in range(len(data)):
+                mycur.execute(
+                    "select m.userid from meetinguser m , user n where m.userid=n.userid and m.meetid=%s" % data[i])
+                temp.append(mycur.fetchall())
+
+            ## Selecting user IDs of the the people attending the meetings in which a covid patient was there
+
+            mycur.execute("select userid from user where covidstatus='+ve'")
+            surecases = mycur.fetchall()
+            surecases = [j for (j,) in surecases]
+            temp2 = []
+            for i in temp:
+                for (j,) in i:
+                    temp2.append(j)
+            temp = temp2
+            try:
+                for i in surecases:
+                    temp.remove(i)
+            except ValueError:
+                pass
+            ## Removing those who have been tested +ve for covid
+
+            for i in temp:
+                mycur.execute("update user set covidstatus='prob+ve' where (userid=%s and covidstatus='-ve')" % i)
+
+                ## Setting covid status of people who attended meeting with covid patient to prob+ve (prob+ve =  probably +ve)
             mycon.commit()
         else:
             mycur.execute("create table MeetingInfo(MeetId int primary key auto_increment,"
@@ -196,70 +233,42 @@ while True:
             ## Insterts value into table(MeetingUser)
 
             mycon.commit()
-    if event == "Check":
-        UID = sg.popup_get_text("Enter UID to check", "Check Covid Status", grab_anywhere=True)
+            mycur.execute('select m.meetid  from meetinguser m,user n where m.userid=n.userid and n.covidstatus="+ve";')
+            data = mycur.fetchall()
 
-        ## Creating a pop up window to enter user ID of a person
+            ## Selecting meeting IDs of meetings in which covid +ve person was there
 
-        mycur.execute("use covid19;")
-        mycur.execute("select covidstatus from user where UserID=%s" % UID)
+            data = [i for (i,) in data]
+            temp = []
+            for i in range(len(data)):
+                mycur.execute(
+                    "select m.userid from meetinguser m , user n where m.userid=n.userid and m.meetid=%s" % data[i])
+                temp.append(mycur.fetchall())
 
-        ## Selecting covid status from the table of users for the provided user ID
+            ## Selecting user IDs of the the people attending the meetings in which a covid patient was there
 
-        data = mycur.fetchone()
+            mycur.execute("select userid from user where covidstatus='+ve'")
+            surecases = mycur.fetchall()
+            surecases = [j for (j,) in surecases]
+            temp2 = []
+            for i in temp:
+                for (j,) in i:
+                    temp2.append(j)
+            temp = temp2
+            try:
+                for i in surecases:
+                    temp.remove(i)
+            except ValueError:
+                pass
+            ## Removing those who have been tested +ve for covid
 
-        ## Function to check covid status (+ve, -ve or prob+ve) of a user
+            for i in temp:
+                mycur.execute("update user set covidstatus='prob+ve' where (userid=%s and covidstatus='-ve')" % i)
 
-        for i in data:
-            Covidstatus = i
-        sg.EasyPrint(Covidstatus, size=(20, 2), grab_anywhere=True)
-    if event == "LIST":
-        mycur.execute("use covid19;")
-        mycur.execute('select m.meetid  from meetinguser m,user n where m.userid=n.userid and n.covidstatus="+ve";')
-        data = mycur.fetchall()
-
-        ## Selecting meeting IDs of meetings in which covid +ve person was there
-
-        data = [i for (i,) in data]
-        temp = []
-        for i in range(len(data)):
-            mycur.execute(
-                "select m.userid from meetinguser m , user n where m.userid=n.userid and m.meetid=%s" % data[i])
-            temp.append(mycur.fetchall())
-
-        ## Selecting user IDs of the the people attending the meetings in which a covid patient was there
-
-        mycur.execute("select userid from user where covidstatus='+ve'")
-        surecases = mycur.fetchall()
-        surecases = [j for (j,) in surecases]
-        temp2 = []
-        for i in temp:
-            for (j,) in i:
-                temp2.append(j)
-        temp = temp2
-        for i in surecases:
-            temp.remove(i)
-
-        ## Removing those who have been tested +ve for covid
-
-        for i in temp:
-            mycur.execute("update user set covidstatus='prob+ve' where (userid=%s and covidstatus='-ve')" % i)
-
-            ## Setting covid status of people who attended meeting with covid patient to prob+ve (prob+ve =  probably +ve)
+                ## Setting covid status of people who attended meeting with covid patient to prob+ve (prob+ve =  probably +ve)
 
             mycon.commit()
-        mycur.execute("select userid,name from user where covidstatus='prob+ve'")
-        finaldata = mycur.fetchall()
 
-        ## Selecting all people with covid status as prob+ve and putting them in the list of prob+ve cases
-
-        table = [[sg.Table(values=finaldata, headings=['UserID', 'Name'])]]
-        window1 = sg.Window(title="Probable cases", layout=table)
-        while True:
-            event, value = window1.read()
-            if event == sg.WINDOW_CLOSED:
-                break
-        window1.close()
 
     elif event == 'submit':
 
@@ -290,7 +299,7 @@ while True:
             ## Inserting personal info. of users into table (User)
 
             except sqltor.IntegrityError:
-                window2.FindElement("UserError").Update('There is an entry with same Phone no.')
+                pass
 
         ## Helps to restrict duplicacy of data
 
@@ -337,12 +346,21 @@ while True:
     elif event == 'search':
         searchby = value['option']
         query = value['squery']
-        list = [searchby, query]
-        mycur.execute("use covid19")
-        mycur.execute("select * from user where %s ='%s'" % (searchby, query))
+        if query=='':
+            mycur.execute("use covid19")
+            mycur.execute("select * from user")
+        else:
+            mycur.execute("use covid19")
+            mycur.execute("select * from user where %s='%s'"%(searchby,query))
         dat = mycur.fetchall()
         window2.FindElement('list').Update(dat)
 
 ## Searches user info according to query entered
+    elif event=="hospitallist":
+        pincode=sg.popup_get_text("Enter Pincode","Chrome")
+        query = "hospitals near {}".format(pincode)
+        res = [i for i in search(query, tld="co.in", num=10, stop=10, pause=2)]
+        webbrowser.get("C:/Program Files (x86)/Google/Chrome/Application/chrome.exe %s").open(res[0])
+    elif event=="graph":
 
 window2.close()
