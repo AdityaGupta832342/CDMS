@@ -65,7 +65,6 @@ else:
         elif event == 'login':
             user = value['username']
             password = value['password']
-            r_key = ["Yes", "No"]
             if value['--SAVE--']:
                 ## if user wants to save password
 
@@ -96,7 +95,7 @@ RightColumn = [[sg.Text(text="Create Users Here", )],
 
 ## Layout of row 1 column 2 for creating new users
 menulayout = [["Options", ["Clear Database", "Delete Saved Password"]],
-              ["Help", ["About..."]]]
+              ["Help", ["About...","Help"]]]
 leftColumn = [[sg.Text(text="Find Users Here")],
               [sg.Text(text='Search User By'),
                sg.InputOptionMenu(values=['UserID', 'Name', 'Address', 'Phone', 'CovidStatus'], key="option")],
@@ -161,9 +160,7 @@ while True:
         mycur.execute("show tables")
         data = mycur.fetchall()
         if ('meetinginfo',) in data:
-        
             ## Checks for existing table (MeetingInfo). If it does not exist, it creates one
-            
             try:
                 mycur.execute(
                     "insert into meetinginfo(Purpose,Date) values('%s','%s');" % (value['purpose'], value['Date']))
@@ -176,9 +173,7 @@ while True:
                 uid = value['UIs']
                 uidlist = [(MeetId, UserID) for UserID in uid.split(',')]
                 mycur.executemany("insert into MeetingUser(MeetId,UserId) values(%s,%s)", uidlist)
-                
                 ## Insterts value into the table (MeetingUser)
-                
                 mycon.commit()
             except sqltor.Error:
                 window2.FindElement("MeetError").Update("There was a problem logging the meet")
@@ -381,7 +376,7 @@ while True:
         res = [i for i in search(query, tld="co.in", num=3, stop=3, pause=2)]
         webbrowser.open_new_tab(res[0])
 
-        ## Opens a tab on the internet to show covid testing centers near the pincode entered
+        ## opens a tab on the internet to show covid testing centers near the pincode entered
 
     elif event == "graph":
         try:
@@ -428,27 +423,47 @@ while True:
     elif event == "About...":
         string2 = '''
         Welcome to COVID 19 Case Management Application
-        
-        This is a RDBMS based system which logs meetings 
-                    between Users in the DBMS
-        
-        To start you need to create users in the Create 
-                           Users section
-        
-        You can add as many users you want and search them 
-                       in the Search Section
-        
-        Once a covid +ve person is logged in a meeting with 
-             a non COVID person,The covid -ve person
-        
-        is marked as prob+ve. You can update any info by 
-                    clicking the update button
-        
-        You can also view a graph based on the block vs. 
+
+        This is a RDBMS based system which logs meetings
+                    between Users in the RDBMS
+
+        To start,you need to create users in the Create
+        Users section.You can add as many users you want
+        and search them in the Search Section
+
+        Once a covid +ve person is logged in a meeting with
+        a non COVID person,The covid -ve person is marked as
+        prob+ve.You can update any info by clicking the
+        update button
+
+        You can also view a graph based on the block vs.
              cases by clicking the graph button '''
 
-        sg.popup(string2, title="About...", grab_anywhere=True)
+        sg.popup_ok_cancel(string2, title="About...", grab_anywhere=True)
+    elif event=="Help":
+        layout3=[[sg.Text("What can I help you with?"),
+                  sg.InputOptionMenu(values=["Formats","Graphs","Inputting Data"],k="helpoption",)],
+                 [sg.Button("Submit",k="help")],
+                 [sg.Text(text="",size=(70,8),k="L@bel")]]
+        window3=sg.Window(title="Help",layout=layout3)
+        while True:
+            event1,value1=window3.read()
+            if event1==sg.WINDOW_CLOSED:
+                break
+            elif event1=="help":
+                if value1["helpoption"]=="Formats":
+                    window3.FindElement("L@bel").Update('''The date has to be in YYYY-MM-DD format.Example:2020-09-12\n
+                    The Address should start with Flat no/Plot no. Example:D-128 ''')
 
-    ## Helps user to use the application smoothly
-
+                elif value1["helpoption"]=="Graphs":
+                    window3.FindElement("L@bel").Update("The Graph takes data from the Address and no. of cases(hence the block should be the first alphabet)"
+                                                        "It can be edited using the options provided in the matplotlib library")
+                elif value1["helpoption"]=="Inputting Data":
+                    window3.FindElement("L@bel").Update('The code handles duplicate data for you so no need to worry about that.'
+                                                        'You need to enter data manually for each entry as there is not automation available.'
+                                                        'The data should follow the formats specified and remember to wait after clicking submit')
+        ## helps user to use the application smoothly
+        # noinspection PyUnboundLocalVariable
+        window3.close()
 window2.close()
+
